@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competitive Mobility Systems Simulator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #root {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #1a2332;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            color: #e0e6ed;
+        }
+
+        .card h2 {
+            color: #64b5f6;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #64b5f6;
+            padding-bottom: 10px;
+        }
+
+        .simulation-canvas {
+            background: #0d1b2a;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            height: 700px;
+            border: 1px solid #2c5364;
+        }
+
+        .race-track {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 450px;
+            border: 60px solid #1e3a5f;
+            border-radius: 50%;
+            box-shadow: inset 0 0 20px rgba(100, 181, 246, 0.3),
+                        0 0 20px rgba(100, 181, 246, 0.2);
+        }
+
+        .race-track::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(100% - 20px);
+            height: calc(100% - 20px);
+            border: 2px dashed rgba(100, 181, 246, 0.4);
+            border-radius: 50%;
+        }
+
+        .agent {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+
+        .agent:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-table thead {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color: white;
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        .leaderboard-table tbody tr {
+            border-bottom: 1px solid #2c3e50;
+            transition: background 0.2s;
+        }
+
+        .leaderboard-table tbody tr:hover {
+            background: #263545;
+        }
+
+        .rank {
+            font-weight: bold;
+            color: #64b5f6;
+            font-size: 1.2rem;
+        }
+
+        .rank-1 { color: #FFD700; }
+        .rank-2 { color: #C0C0C0; }
+        .rank-3 { color: #CD7F32; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(21, 101, 192, 0.6);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .event-log {
+            height: 200px;
+            overflow-y: auto;
+            background: #0d1b2a;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #e0e6ed;
+            border: 1px solid #2c5364;
+        }
+
+        .event-item {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-left: 3px solid #64b5f6;
+            padding-left: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1565c0 0%, #0d47a1 100%);
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .speed-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .speed-fast { background: #28a745; color: white; }
+        .speed-medium { background: #ffc107; color: black; }
+        .speed-slow { background: #dc3545; color: white; }
+
+        .agent.pit-stop {
+            animation: pitStopBlink 0.5s ease-in-out infinite;
+            border: 3px solid #ffc107;
+        }
+
+        .agent.off-track {
+            animation: offTrackShake 0.2s ease-in-out infinite;
+            border: 3px solid #dc3545;
+            opacity: 0.7;
+        }
+
+        @keyframes pitStopBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes offTrackShake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-2px, 2px); }
+            75% { transform: translate(2px, -2px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Utility functions
+        const generateRandomColor = () => {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        };
+
+        const getSpeedClass = (speed) => {
+            if (speed > 70) return 'speed-fast';
+            if (speed > 40) return 'speed-medium';
+            return 'speed-slow';
+        };
+
+        function App() {
+            const [agents, setAgents] = useState([]);
+            const [events, setEvents] = useState([]);
+            const [isRunning, setIsRunning] = useState(false);
+            const [simulationTime, setSimulationTime] = useState(0);
+            const [agentCount, setAgentCount] = useState(10);
+            const intervalRef = useRef(null);
+            const eventLogRef = useRef(null);
+
+            // Initialize simulation
+            const initializeSimulation = () => {
+                const centerX = 50;
+                const centerY = 50;
+                const radiusX = 46; // Horizontal radius for oval
+                const radiusY = 28; // Vertical radius for oval
+                
+                const newAgents = Array.from({ length: agentCount }, (_, i) => {
+                    const angle = (i / agentCount) * 2 * Math.PI; // Evenly space agents
+                    const startX = centerX + radiusX * Math.cos(angle);
+                    const startY = centerY + radiusY * Math.sin(angle);
+                    
+                    return {
+                        id: i + 1,
+                        name: `Agent ${i + 1}`,
+                        x: startX,
+                        y: startY,
+                        speed: 60 + Math.random() * 40, // Speed between 60-100
+                        distance: 0,
+                        color: generateRandomColor(),
+                        angle: angle, // Track position on oval
+                        laps: 0,
+                        fuel: 100, // Fuel level
+                        tireWear: 0, // Tire wear percentage
+                        inPitStop: false,
+                        pitStopTimer: 0,
+                        offTrack: false,
+                    };
+                });
+                setAgents(newAgents);
+                setEvents([{ time: 0, message: '🏁 Race initialized - Agents on starting grid!' }]);
+                setSimulationTime(0);
+            };
+
+            // Start simulation
+            const startSimulation = () => {
+                if (agents.length === 0) initializeSimulation();
+                setIsRunning(true);
+                
+                intervalRef.current = setInterval(() => {
+                    setSimulationTime(prev => prev + 1);
+                    
+                    setAgents(prevAgents => {
+                        const centerX = 50;
+                        const centerY = 50;
+                        const radiusX = 46; // Horizontal radius for oval
+                        const radiusY = 28; // Vertical radius for oval
+                        
+                        const updatedAgents = prevAgents.map(agent => {
+                            // Handle pit stop
+                            if (agent.inPitStop) {
+                                const newPitTimer = agent.pitStopTimer - 1;
+                                if (newPitTimer <= 0) {
+                                    setEvents(prev => [...prev, {
+                                        time: Date.now(),
+                                        message: `🔧 Agent ${agent.id} exits pit lane - Refueled & Fresh tires!`
+                                    }].slice(-20));
+                                    return {
+                                        ...agent,
+                                        inPitStop: false,
+                                        pitStopTimer: 0,
+                                        fuel: 100,
+                                        tireWear: 0,
+                                    };
+                                }
+                                return { ...agent, pitStopTimer: newPitTimer };
+                            }
+
+                            // Move along oval track
+                            const angularSpeed = (agent.speed / 1000); // Convert speed to angular velocity
+                            let newAngle = agent.angle + angularSpeed;
+                            
+                            // Track laps
+                            let newLaps = agent.laps;
+                            if (newAngle > 2 * Math.PI) {
+                                newAngle -= 2 * Math.PI;
+                                newLaps += 1;
+                                setEvents(prev => [...prev, {
+                                    time: Date.now(),
+                                    message: `🏁 Agent ${agent.id} completed lap ${newLaps}!`
+                                }].slice(-20));
+                            }
+                            
+                            // Calculate position on oval track
+                            let newX = centerX + radiusX * Math.cos(newAngle);
+                            let newY = centerY + radiusY * Math.sin(newAngle);
+                            
+                            // Check if off track (add small random deviation)
+                            const deviation = (Math.random() - 0.5) * 0.5;
+                            newX += deviation;
+                            newY += deviation;
+                            
+                            // Calculate distance from track center
+                            const normalizedX = (newX - centerX) / radiusX;
+                            const normalizedY = (newY - centerY) / radiusY;
+                            const distFromCenter = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
+                            
+                            // Check if agent went off track (outside oval bounds)
+                            const isOffTrack = distFromCenter > 1.15 || distFromCenter < 0.85;
+                            if (isOffTrack && !agent.offTrack) {
+                                setEvents(prev => [...prev, {
+                                    time: Date.now(),
+                                    message: `⚠️ Agent ${agent.id} went OFF TRACK! Losing speed...`
+                                }].slice(-20));
+                            }
+                            
+                            const distance = angularSpeed * Math.sqrt(radiusX * radiusY);
+                            const newDistance = agent.distance + distance;
+                            
+                            // Update fuel and tire wear
+                            let newFuel = agent.fuel - 0.05;
+                            let newTireWear = agent.tireWear + 0.03;
+                            let newInPitStop = agent.inPitStop;
+                            let newPitStopTimer = agent.pitStopTimer;
+                            
+                            // Check if needs pit stop
+                            if ((newFuel < 20 || newTireWear > 80) && !agent.inPitStop && Math.random() > 0.98) {
+                                newInPitStop = true;
+                                newPitStopTimer = 30; // 3 seconds in pit
+                                const reason = newFuel < 20 ? 'Low fuel' : 'Tire wear';
+                                setEvents(prev => [...prev, {
+                                    time: Date.now(),
+                                    message: `🏎️ Agent ${agent.id} enters PIT STOP! (${reason})`
+                                }].slice(-20));
+                            }
+
+                            return {
+                                ...agent,
+                                x: newX,
+                                y: newY,
+                                angle: newAngle,
+                                distance: newDistance,
+                                laps: newLaps,
+                                fuel: Math.max(0, newFuel),
+                                tireWear: Math.min(100, newTireWear),
+                                inPitStop: newInPitStop,
+                                pitStopTimer: newPitStopTimer,
+                                offTrack: isOffTrack,
+                            };
+                        });
+
+                        return updatedAgents;
+                    });
+
+                    // Random racing events
+                    if (Math.random() > 0.98) {
+                        const eventTypes = [
+                            { msg: '⚡ DRS activated', icon: '' },
+                            { msg: '🔥 KERS boost', icon: '' },
+                            { msg: '💨 Slipstream detected', icon: '' },
+                            { msg: '⚠️ Close battle for position', icon: '' },
+                            { msg: '🏆 Setting fastest lap', icon: '' },
+                        ];
+                        const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                        const randomAgent = Math.floor(Math.random() * agentCount) + 1;
+                        
+                        setEvents(prev => [...prev, {
+                            time: Date.now(),
+                            message: `Agent ${randomAgent}: ${randomEvent.msg}`
+                        }].slice(-20));
+                    }
+                }, 100);
+            };
+
+            // Stop simulation
+            const stopSimulation = () => {
+                setIsRunning(false);
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                }
+            };
+
+            // Reset simulation
+            const resetSimulation = () => {
+                stopSimulation();
+                initializeSimulation();
+            };
+
+            // Auto-scroll event log
+            useEffect(() => {
+                if (eventLogRef.current) {
+                    eventLogRef.current.scrollTop = eventLogRef.current.scrollHeight;
+                }
+            }, [events]);
+
+            // Cleanup
+            useEffect(() => {
+                return () => {
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                };
+            }, []);
+
+            // Sort agents by distance for leaderboard
+            const leaderboard = [...agents].sort((a, b) => b.distance - a.distance);
+
+            return (
+                <>
+                    <div className="header">
+                        <h1>🏁 Competitive Mobility Systems Simulator</h1>
+                        <p>Real-time multi-agent simulation with live leaderboard tracking</p>
+                    </div>
+
+                    <div className="card">
+                        <div className="controls">
+                            <button className="btn btn-primary" onClick={initializeSimulation}>
+                                🔧 Initialize
+                            </button>
+                            <button 
+                                className="btn btn-success" 
+                                onClick={startSimulation}
+                                disabled={isRunning}
+                            >
+                                ▶️ Start
+                            </button>
+                            <button 
+                                className="btn btn-danger" 
+                                onClick={stopSimulation}
+                                disabled={!isRunning}
+                            >
+                                ⏸️ Pause
+                            </button>
+                            <button className="btn btn-secondary" onClick={resetSimulation}>
+                                🔄 Reset
+                            </button>
+                            <label style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                Agents:
+                                <input 
+                                    type="number" 
+                                    min="5" 
+                                    max="30" 
+                                    value={agentCount}
+                                    onChange={(e) => setAgentCount(parseInt(e.target.value))}
+                                    style={{width: '60px', padding: '8px', borderRadius: '4px', border: '1px solid #ccc'}}
+                                    disabled={isRunning}
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="stats">
+                            <div className="stat-card">
+                                <h3>{agents.length}</h3>
+                                <p>Active Agents</p>
+                            </div>
+                            <div className="stat-card">
+                                <h3>{simulationTime}</h3>
+                                <p>Simulation Time</p>
+                            </div>
+                            <div className="stat-card">
+                                <h3>{events.length}</h3>
+                                <p>Total Events</p>
+                            </div>
+                            <div className="stat-card">
+                                <h3>{isRunning ? '🟢' : '🔴'}</h3>
+                                <p>{isRunning ? 'Running' : 'Stopped'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="container">
+                        <div className="card">
+                            <h2>🏁 Race Track</h2>
+                            <div className="simulation-canvas">
+                                <div className="race-track"></div>
+                                {agents.map(agent => (
+                                    <div
+                                        key={agent.id}
+                                        className={`agent ${agent.inPitStop ? 'pit-stop' : ''} ${agent.offTrack ? 'off-track' : ''}`}
+                                        style={{
+                                            left: `${agent.x}%`,
+                                            top: `${agent.y}%`,
+                                            backgroundColor: agent.color,
+                                        }}
+                                        title={`${agent.name} - Speed: ${agent.speed.toFixed(1)} - Laps: ${agent.laps}\nFuel: ${agent.fuel?.toFixed(1)}% - Tire Wear: ${agent.tireWear?.toFixed(1)}%\n${agent.inPitStop ? 'IN PIT STOP' : agent.offTrack ? 'OFF TRACK' : 'On Track'}`}
+                                    >
+                                        {agent.inPitStop ? '🔧' : agent.id}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="card">
+                            <h2>🏆 Live Leaderboard</h2>
+                            <table className="leaderboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Agent</th>
+                                        <th>Laps</th>
+                                        <th>Speed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {leaderboard.map((agent, index) => (
+                                        <tr key={agent.id}>
+                                            <td className={`rank rank-${index + 1}`}>#{index + 1}</td>
+                                            <td>
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    width: '12px',
+                                                    height: '12px',
+                                                    borderRadius: '50%',
+                                                    backgroundColor: agent.color,
+                                                    marginRight: '8px'
+                                                }}></span>
+                                                {agent.name}
+                                            </td>
+                                            <td>{agent.laps || 0} ({agent.distance.toFixed(0)})</td>
+                                            <td>
+                                                <span className={`speed-badge ${getSpeedClass(agent.speed)}`}>
+                                                    {agent.speed.toFixed(1)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <h2>📋 Event Log</h2>
+                        <div className="event-log" ref={eventLogRef}>
+                            {events.map((event, index) => (
+                                <div key={index} className="event-item">
+                                    [{new Date(event.time).toLocaleTimeString()}] {event.message}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
